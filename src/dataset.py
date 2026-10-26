@@ -41,26 +41,20 @@ class BrainMRIDataset(Dataset):
 
 def get_patient_splits(data_dir="data/raw", test_size=0.2):
     """
-    Groups files by patient ID to ensure patient-wise train/val splitting.
+    Groups files by patient ID to ensure patient-wise train/val splitting,
+    handling nested folder structures automatically.
     """
-    # LGG dataset structure typically has folders named after patient IDs containing _mask.tif files
-    patient_dirs = glob.glob(os.path.join(data_dir, "*_*"))
-    
-    if not patient_dirs:
-        # Fallback search if directory structure varies slightly
-        patient_dirs = [os.path.dirname(p) for p in glob.glob(os.path.join(data_dir, "**", "*_mask.tif"), recursive=True)]
-        patient_dirs = list(set(patient_dirs))
+    # Recursively find all mask files anywhere inside data/raw
+    mask_paths = glob.glob(os.path.join(data_dir, "**", "*_mask.tif"), recursive=True)
 
     all_images = []
     all_masks = []
 
-    for p_dir in patient_dirs:
-        masks = glob.glob(os.path.join(p_dir, "*_mask.tif"))
-        for mask_path in masks:
-            img_path = mask_path.replace("_mask.tif", ".tif")
-            if os.path.exists(img_path):
-                all_images.append(img_path)
-                all_masks.append(mask_path)
+    for mask_path in mask_paths:
+        img_path = mask_path.replace("_mask.tif", ".tif")
+        if os.path.exists(img_path):
+            all_images.append(img_path)
+            all_masks.append(mask_path)
 
     print(f"[INFO] Found {len(all_images)} total valid image-mask pairs.")
     
@@ -68,8 +62,7 @@ def get_patient_splits(data_dir="data/raw", test_size=0.2):
         print("[WARNING] No image-mask pairs found. Check your data/raw/ extraction path.")
         return [], [], [], []
 
-    # Simple train/val split (patient-level grouping can be enhanced further)
-    X_train, X_val, y_train, y_val = train_test_split(all_images, all_masks, test_size=test_size, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(all_images, all_masks,          test_size=test_size, random_state=42)
     return X_train, X_val, y_train, y_val
 
 if __name__ == "__main__":
